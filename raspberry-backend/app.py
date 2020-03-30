@@ -5,16 +5,17 @@
 #
 # Last update: March 29, 2020
 
-
+from time import time
 import json
 from flask import Flask, render_template, make_response
 import sqlite3
+import json
 
 WEBAPP = Flask(__name__)
 
 @WEBAPP.route('/')
 def hello_world():
-    return render_template('index.html', data='test')
+    return render_template('index.html', result=live_data())
 
 @WEBAPP.route('/live-data')
 def live_data():
@@ -23,7 +24,7 @@ def live_data():
     Output in json format
     """
 
-    data = {'ts' : None, 'temperature' : None, 'pressure' : None}
+    data = {'created_at' : None, 'temperature' : None, 'pressure' : None}
 
     sqlite_file = 'database/HEC_monitoringDB.sqlite'
     with sqlite3.connect(sqlite_file) as conn:
@@ -34,7 +35,7 @@ def live_data():
         data['temperature'] = fetched[1]
         data['pressure'] = fetched[2]
 
-    response = make_response(json.dumps(data))
+    response = make_response(json.dumps(data).encode('utf-8'))
     response.content_type = 'application/json'
     return response
 

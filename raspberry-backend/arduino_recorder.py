@@ -10,6 +10,8 @@ import time
 import argparse
 import sqlite3
 from random import random
+from datetime import datetime
+
 
 SQLITE_FILE = 'database/HEC_monitoringDB.sqlite'  # name of the sqlite database file
 TABLE_NAME = 'hec_monitor'  # name of the table to be created
@@ -38,7 +40,7 @@ def database_setup():
         # Connecting to the database file
         conn = sqlite3.connect(SQLITE_FILE)
         conn.execute('''CREATE TABLE IF NOT EXISTS ''' + TABLE_NAME + ''' (
-           created_at     DATETIME        NOT NULL,
+           created_at     INTEGER        NOT NULL,
            temperature    FLOAT           NOT NULL,
            pressure       FLOAT           NOT NULL
            );'''
@@ -55,10 +57,17 @@ def monitoring(source_address):
     Store arduino data in the sqlite3 table. 
     '''
 
+    epoch = datetime(1970, 1, 1)
+
     with sqlite3.connect(SQLITE_FILE) as conn:
         cursor = conn.cursor()
         while True:
+            current_time = datetime.now()
+            # Computing the time in seconds since the epoch because easier to manipulate. 
+            timestamp = (current_time -epoch).total_seconds() * 1000
+
             random_data = {
+                'time' : timestamp,
                 'temperature': get_temperature(),
                 'pressure': get_pressure()
             }
@@ -66,7 +75,7 @@ def monitoring(source_address):
             try:
                 cursor.execute(
                         'INSERT INTO {tn} VALUES '
-                        '(DateTime(), :temperature, :pressure)'
+                        '(:time, :temperature, :pressure)'
                         .format(tn=TABLE_NAME),
                         random_data
                 )
@@ -76,11 +85,11 @@ def monitoring(source_address):
             finally:
                 print("temperature: {temperature}  pressure: {pressure}".format(**random_data))
                 sys.stdout.flush()
-                time.sleep(2)
+                time.sleep(1)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Python script monitorign Arduino data')
-    parser.add_argument('--source', default='192.168.0.10')
+    parser.add_argument('--source', default='ttys0 or similar')
     return parser.parse_args()
 
 if __name__ == "__main__":
